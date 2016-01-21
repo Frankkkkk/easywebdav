@@ -1,3 +1,4 @@
+# coding: utf-8
 import requests
 import platform
 from numbers import Number
@@ -9,17 +10,19 @@ py_majversion, py_minversion, py_revversion = platform.python_version_tuple()
 if py_majversion == '2':
     from httplib import responses as HTTP_CODES
     from urlparse import urlparse
-    from urllib import quote 
-    basestring = basestring
+    from urlparse import urlsplit
 else:
     from http.client import responses as HTTP_CODES
-    from urllib.parse import urlparse, quote
-    basestring = (str,bytes)
+    from urllib.parse import urlparse
+    from urllib.parse import urlsplit
+
 
 DOWNLOAD_CHUNK_SIZE_BYTES = 1 * 1024 * 1024
 
 AUTH_MODE_BASIC = 'basic'
 AUTH_MODE_DIGEST = 'digest'
+
+CONTENT_TYPE_DIRECTORY = 'httpd/unix-directory'
 
 class WebdavException(Exception):
     pass
@@ -32,7 +35,7 @@ def codestr(code):
     return HTTP_CODES.get(code, 'UNKNOWN')
 
 
-File = namedtuple('File', ['name', 'size', 'mtime', 'ctime', 'contenttype'])
+File = namedtuple('File', ['name', 'size', 'mtime', 'ctime', 'contenttype','contentlength', 'is_dir'])
 
 
 def prop(elem, name, default=None):
@@ -49,12 +52,28 @@ def getrealcontenttype(elem):
 
 
 def elem2file(elem):
+    href = prop(elem, 'href')
+    url_parts = urlsplit(href)
+    path = url_parts.path
+
+    # remove trailing slashes
+    if path[-1] == '/':
+        path = path[0:len(path)-1]
+
+    content_type = prop(elem, 'getcontenttype', '')
+    content_length = prop(elem, 'getcontentlength')
+
+    # Try to detect directories...
+    is_dir = (content_type == CONTENT_TYPE_DIRECTORY) or content_length == None
+
     return File(
-        prop(elem, 'href'),
+        path,
         int(prop(elem, 'getcontentlength', 0)),
         prop(elem, 'getlastmodified', ''),
         prop(elem, 'creationdate', ''),
-        getrealcontenttype(elem),
+        content_type,
+        int(content_length) if content_length != None else None,
+        is_dir
     )
 
 
@@ -94,6 +113,7 @@ class Client(object):
         self.baseurl = '{0}://{1}:{2}'.format(protocol, host, port)
         if path:
             self.baseurl = '{0}/{1}'.format(self.baseurl, path)
+          
         self.cwd = '/'
         self.session = requests.session()
         self.session.verify = verify_ssl
