@@ -12,11 +12,15 @@ if py_majversion == '2':
     from httplib import responses as HTTP_CODES
     from urlparse import urlparse
     from urlparse import urlsplit
+    from urllib import quote 
 else:
     from http.client import responses as HTTP_CODES
     from urllib.parse import urlparse
+    from urllib.parse import quote
     from urllib.parse import urlsplit
-    
+
+
+
 DOWNLOAD_CHUNK_SIZE_BYTES = 1 * 1024 * 1024
 
 AUTH_MODE_BASIC = 'basic'
@@ -131,7 +135,7 @@ class Client(object):
         return response
 
     def _get_url(self, path):
-        path = str(path).strip()
+        path = quote(str(path).strip())
         if path.startswith('/'):
             return self.baseurl + path
         return "".join((self.baseurl, self.cwd, path))
