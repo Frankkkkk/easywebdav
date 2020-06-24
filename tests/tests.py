@@ -151,3 +151,13 @@ class Tests(TestCase):
         sio.seek(0)
         self.client.upload(sio, 'file')
         self._assert_file('file', self.content)
+        
+    def test__ls(self):
+        self._create_dir('one', 'two')
+        path = self._local_file(self.content)
+        self.client.upload(path, 'file')
+        list = self.client.ls()
+        self.assertSetEqual(set(map(
+                lambda x : x.replace('http://localhost:28080/', ''),
+                {entry.name for entry in list})), 
+            {'.', 'one', 'two', 'file'})

@@ -40,7 +40,7 @@ File = namedtuple('File', ['name', 'size', 'mtime', 'ctime', 'contenttype','cont
 
 def prop(elem, name, default=None):
     child = elem.find('.//{DAV:}' + name)
-    return default if child is None else child.text
+    return default if child is None or child.text is None else child.text
 
 
 def elem2file(elem):
@@ -180,7 +180,7 @@ class Client(object):
         self._send('DELETE', path, 204).content
 
     def upload(self, local_path_or_fileobj, remote_path):
-        if isinstance(local_path_or_fileobj, string_types):
+        if isinstance(local_path_or_fileobj, str):
             with open(local_path_or_fileobj, 'rb') as f:
                 self._upload(f, remote_path)
         else:
@@ -191,7 +191,7 @@ class Client(object):
 
     def download(self, remote_path, local_path_or_fileobj):
         response = self._send('GET', remote_path, 200, stream=True)
-        if isinstance(local_path_or_fileobj, string_types):
+        if isinstance(local_path_or_fileobj, str):
             with open(local_path_or_fileobj, 'wb') as f:
                 self._download(f, response)
         else:
